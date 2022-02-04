@@ -68,7 +68,9 @@ func main() {
 	}
 	defer probeExit.Close()
 
-	rd, err := perf.NewReader(objs.Events, int(unsafe.Sizeof(Event{})))
+	bufSize := 20 * int(unsafe.Sizeof(Event{}))
+
+	rd, err := perf.NewReader(objs.Events, bufSize)
 	if err != nil {
 		log.Fatalf("creating perf event reader: %s", err)
 	}
