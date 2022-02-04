@@ -290,33 +290,6 @@ int raw_tracepoint_sys_exit(struct bpf_raw_tracepoint_args *ctx)
 
   void *file_path = get_path_str(&f->f_path);
 
-  /* struct path p; */
-  /* bpf_probe_read(&p, sizeof(p), &f->f_path); */
-
-  /* struct vfsmount *mnt; */
-  /* bpf_probe_read(&mnt, sizeof(mnt), &p.mnt); */
-  /* if (mnt == NULL) { */
-  /*   return 0; */
-  /* } */
-
-	/* struct dentry *mnt_root; */
-  /* bpf_probe_read(&mnt_root, sizeof(mnt_root), &mnt->mnt_root); */
-  /* if (mnt_root == NULL) { */
-  /*   return 0; */
-  /* } */
-
-  /* struct qstr d_name; */
-  /* bpf_probe_read(&d_name, sizeof(d_name), &mnt_root->d_name); */
-
-  /* u32 len = (d_name.len+1) & (PATH_MAX-1); */
-
-  /* res = bpf_probe_read_str(&event->str, len, d_name.name); */
-  /* if (res > 0) { */
-  /*   event->str[(res - 1) & (PATH_MAX - 1)] = 0; */
-  /* } else { */
-  /*   return 0; */
-  /* } */
-
   event->pid = bpf_get_current_pid_tgid();
   event->type = EVENT_TYPE_EXIT;
   res = bpf_probe_read_str(&event->str, 4096, file_path);
