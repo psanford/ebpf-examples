@@ -22,9 +22,15 @@ import (
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc $BPF_CLANG -cflags $BPF_CFLAGS bpf openat.bpf.c -- -I../headers
 
 type Event struct {
-	PID uint32
-	Str [4096]byte
+	PID  uint32
+	Type uint32
+	Str  [4096]byte
 }
+
+const (
+	Enter = 1
+	Exit  = 2
+)
 
 const mapKey uint32 = 0
 
@@ -44,14 +50,23 @@ func main() {
 	}
 	defer objs.Close()
 
-	probe, err := link.AttachRawTracepoint(link.RawTracepointOptions{
+	probeEnter, err := link.AttachRawTracepoint(link.RawTracepointOptions{
 		Name:    "sys_enter",
 		Program: objs.RawTracepointSysEnter,
 	})
 	if err != nil {
 		log.Fatalf("Attach raw tracepoint err: %s", err)
 	}
-	defer probe.Close()
+	defer probeEnter.Close()
+
+	probeExit, err := link.AttachRawTracepoint(link.RawTracepointOptions{
+		Name:    "sys_exit",
+		Program: objs.RawTracepointSysExit,
+	})
+	if err != nil {
+		log.Fatalf("Attach raw tracepoint err: %s", err)
+	}
+	defer probeExit.Close()
 
 	rd, err := perf.NewReader(objs.Events, int(unsafe.Sizeof(Event{})))
 	if err != nil {
@@ -92,6 +107,11 @@ func main() {
 			continue
 		}
 
-		log.Printf("%d: %s", event.PID, unix.ByteSliceToString(event.Str[:]))
+		typ := "enter"
+		if event.Type == Exit {
+			typ = "exit"
+		}
+
+		log.Printf("%d/%s: %s", event.PID, typ, unix.ByteSliceToString(event.Str[:]))
 	}
 }

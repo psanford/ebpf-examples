@@ -55,13 +55,16 @@ type bpfSpecs struct {
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfProgramSpecs struct {
 	RawTracepointSysEnter *ebpf.ProgramSpec `ebpf:"raw_tracepoint_sys_enter"`
+	RawTracepointSysExit  *ebpf.ProgramSpec `ebpf:"raw_tracepoint_sys_exit"`
 }
 
 // bpfMapSpecs contains maps before they are loaded into the kernel.
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type bpfMapSpecs struct {
+	BufsOff       *ebpf.MapSpec `ebpf:"bufs_off"`
 	Events        *ebpf.MapSpec `ebpf:"events"`
+	TmpBufMap     *ebpf.MapSpec `ebpf:"tmp_buf_map"`
 	TmpStorageMap *ebpf.MapSpec `ebpf:"tmp_storage_map"`
 }
 
@@ -84,13 +87,17 @@ func (o *bpfObjects) Close() error {
 //
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfMaps struct {
+	BufsOff       *ebpf.Map `ebpf:"bufs_off"`
 	Events        *ebpf.Map `ebpf:"events"`
+	TmpBufMap     *ebpf.Map `ebpf:"tmp_buf_map"`
 	TmpStorageMap *ebpf.Map `ebpf:"tmp_storage_map"`
 }
 
 func (m *bpfMaps) Close() error {
 	return _BpfClose(
+		m.BufsOff,
 		m.Events,
+		m.TmpBufMap,
 		m.TmpStorageMap,
 	)
 }
@@ -100,11 +107,13 @@ func (m *bpfMaps) Close() error {
 // It can be passed to loadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type bpfPrograms struct {
 	RawTracepointSysEnter *ebpf.Program `ebpf:"raw_tracepoint_sys_enter"`
+	RawTracepointSysExit  *ebpf.Program `ebpf:"raw_tracepoint_sys_exit"`
 }
 
 func (p *bpfPrograms) Close() error {
 	return _BpfClose(
 		p.RawTracepointSysEnter,
+		p.RawTracepointSysExit,
 	)
 }
 
