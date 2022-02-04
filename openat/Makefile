@@ -3,6 +3,9 @@ STRIP ?= llvm-strip
 # CFLAGS := -O2 -g -Wall -Werror $(CFLAGS)
 CFLAGS := -O2 -g  $(CFLAGS)
 
+.PHONY: build
+build: generate
+	go build
 
 .PHONY: generate
 generate: export BPF_CLANG := $(CLANG)

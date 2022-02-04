@@ -8,17 +8,27 @@
 package main
 
 import (
+	"bytes"
+	"encoding/binary"
+	"errors"
 	"log"
 	"os"
 	"os/signal"
-	"time"
+	"unsafe"
 
 	"github.com/cilium/ebpf/link"
+	"github.com/cilium/ebpf/perf"
 	"github.com/cilium/ebpf/rlimit"
+	"golang.org/x/sys/unix"
 )
 
 // $BPF_CLANG and $BPF_CFLAGS are set by the Makefile.
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc $BPF_CLANG -cflags $BPF_CFLAGS bpf openat.bpf.c -- -I../headers
+
+type Event struct {
+	PID uint32
+	Str [4096]byte
+}
 
 const mapKey uint32 = 0
 
@@ -47,44 +57,45 @@ func main() {
 	}
 	defer probe.Close()
 
-	// Read loop reporting the total amount of times the kernel
-	// function was entered, once per second.
-	ticker := time.NewTicker(1 * time.Second)
-
-	log.Println("Waiting for events..")
-
-	data := make([][]byte, 16)
-	for i := 0; i < len(data); i++ {
-		data[i] = make([]byte, 4096)
+	rd, err := perf.NewReader(objs.Events, int(unsafe.Sizeof(Event{})))
+	if err != nil {
+		log.Fatalf("creating perf event reader: %s", err)
 	}
+	defer rd.Close()
 
-LOOP:
-	for range ticker.C {
-		mi := objs.TmpStorageMap.Iterate()
-		more := true
-		for more {
-			d2 := data
-			var k uint32
-			more = mi.Next(&k, &d2)
-			if !more {
+	go func() {
+		// Wait for a signal and close the perf reader,
+		// which will interrupt rd.Read() and make the program exit.
+		<-sig
+		log.Println("Received signal, exiting program..")
+
+		if err := rd.Close(); err != nil {
+			log.Fatalf("closing perf event reader: %s", err)
+		}
+	}()
+
+	var event Event
+	for {
+		record, err := rd.Read()
+		if err != nil {
+			if errors.Is(err, perf.ErrClosed) {
 				break
 			}
-			for i, d := range d2 {
-				if d[0] == 0 {
-					continue
-				}
-				log.Printf("k:%d i:%d v:%s\n", k, i, string(d))
-			}
+			log.Printf("reading from perf event reader: %s", err)
+			continue
 		}
-		// if err := objs.TmpStorageMap.Lookup(mapKey, &d2); err != nil {
-		// 	log.Fatalf("reading map: %s", err)
-		// }
-		// log.Printf("data %+v\n", d2)
 
-		select {
-		case <-sig:
-			break LOOP
-		default:
+		if record.LostSamples != 0 {
+			log.Printf("perf event ring buffer full, dropped %d samples", record.LostSamples)
+			continue
 		}
+
+		// Parse the perf event entry into an Event structure.
+		if err := binary.Read(bytes.NewBuffer(record.RawSample), binary.LittleEndian, &event); err != nil {
+			log.Printf("parsing perf event: %s", err)
+			continue
+		}
+
+		log.Printf("%d: %s", event.PID, unix.ByteSliceToString(event.Str[:]))
 	}
 }
