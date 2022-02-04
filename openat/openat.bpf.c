@@ -22,8 +22,9 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 
 
 struct event_t {
-  u32 pid;
   u32 type;
+  u32 pid;
+  u64 cgid;
   char str[PATH_MAX];
 };
 
@@ -290,11 +291,12 @@ int raw_tracepoint_sys_exit(struct bpf_raw_tracepoint_args *ctx)
 
   void *file_path = get_path_str(&f->f_path);
 
-  event->pid = bpf_get_current_pid_tgid();
   event->type = EVENT_TYPE_EXIT;
+  event->pid = bpf_get_current_pid_tgid();
+  event->cgid = bpf_get_current_cgroup_id();
   res = bpf_probe_read_str(&event->str, 4096, file_path);
 
-  bpf_printk("open_at exit: %d mnt:%s\n", sizeof(*event), event->str);
+  bpf_printk("open_at exit: cg=%d mnt:%s\n", event->cgid, event->str);
   bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, event, sizeof(*event));
 
   return 0;

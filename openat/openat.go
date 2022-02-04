@@ -22,9 +22,10 @@ import (
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc $BPF_CLANG -cflags $BPF_CFLAGS bpf openat.bpf.c -- -I../headers
 
 type Event struct {
-	PID  uint32
-	Type uint32
-	Str  [4096]byte
+	Type     uint32
+	PID      uint32
+	CgroupID uint64
+	Str      [4096]byte
 }
 
 const (
@@ -114,6 +115,6 @@ func main() {
 			typ = "exit"
 		}
 
-		log.Printf("%d/%s: %s", event.PID, typ, unix.ByteSliceToString(event.Str[:]))
+		log.Printf("%d/%s cg=%d %s", event.PID, typ, event.CgroupID&0xFFFFFF, unix.ByteSliceToString(event.Str[:]))
 	}
 }
