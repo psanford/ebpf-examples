@@ -16,10 +16,6 @@ struct event_t {
   char str[PATH_MAX];
 };
 
-struct event_tt {
-  u32 pid;
-};
-
 struct bpf_map_def SEC("maps") tmp_storage_map = {
     .type = BPF_MAP_TYPE_PERCPU_ARRAY,
     .key_size = sizeof(u32),
