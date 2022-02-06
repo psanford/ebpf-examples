@@ -1,3 +1,4 @@
 *.o
 openat/openat
 lsm-file-open/lsm-file-open
+lsm-exec/lsm-exec
