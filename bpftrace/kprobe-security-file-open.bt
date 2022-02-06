@@ -1,0 +1,12 @@
+#!/usr/bin/env bpftrace
+
+#include <linux/fs.h>
+
+kprobe:security_file_open {
+  $file = ((struct file *) arg0);
+  $name = str($file->f_path.dentry->d_name.name);
+
+  if ($name == "openat.go") {
+    printf("security file open: arg0=%d flags=%d ino=%d %s\n", arg0, $file->f_flags, $file->f_inode->i_ino, $name);
+  }
+}

@@ -1,2 +1,3 @@
 *.o
 openat/openat
+lsm-file-open/lsm-file-open
