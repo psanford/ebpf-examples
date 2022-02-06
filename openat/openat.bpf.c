@@ -291,12 +291,27 @@ int raw_tracepoint_sys_exit(struct bpf_raw_tracepoint_args *ctx)
 
   void *file_path = get_path_str(&f->f_path);
 
+  struct inode *f_inode;
+  bpf_probe_read(&f_inode, sizeof(f_inode), &f->f_inode);
+  if (f_inode == NULL) {
+    return 0;
+  }
+
+  struct super_block *i_sb;
+  bpf_probe_read(&i_sb, sizeof(i_sb), &f_inode->i_sb);
+  if (i_sb == NULL) {
+    return 0;
+  }
+
+  dev_t s_dev = 0;
+  bpf_probe_read(&s_dev, sizeof(s_dev), &i_sb->s_dev);
+
   event->type = EVENT_TYPE_EXIT;
   event->pid = bpf_get_current_pid_tgid();
   event->cgid = bpf_get_current_cgroup_id();
   res = bpf_probe_read_str(&event->str, 4096, file_path);
 
-  bpf_printk("open_at exit: cg=%d mnt:%s\n", event->cgid, event->str);
+  bpf_printk("open_at exit: dev=%x cg=%d mnt:%s\n", s_dev, event->cgid, event->str);
   bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, event, sizeof(*event));
 
   return 0;
