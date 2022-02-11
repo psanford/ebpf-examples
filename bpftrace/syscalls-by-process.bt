@@ -1,0 +1,11 @@
+#!/usr/bin/env bpftrace
+
+tracepoint:syscalls:sys_enter_* {
+  @[comm, probe] = count();
+}
+
+interval:s:1 {
+  time("%H:%M:%S\n");
+  print(@);
+  clear(@);
+}
