@@ -1,0 +1,12 @@
+#!/usr/bin/env bpftrace
+
+#include <linux/socket.h>
+#include <net/sock.h>
+
+kprobe:security_socket_sendmsg /comm=="curl"/ {
+  $msg = ((struct msghdr *) arg1);
+
+  time("%H:%M:%S ");
+  printf("%-8d %-16s ", pid, comm);
+  printf("%s\n", str(uptr($msg->msg_iter.iov->iov_base + $msg->msg_iter.iov_offset), arg2));
+}
