@@ -8,5 +8,6 @@ kprobe:security_socket_sendmsg /comm=="curl"/ {
 
   time("%H:%M:%S ");
   printf("%-8d %-16s ", pid, comm);
+  /* printf("%r\n", buf(uptr($msg->msg_iter.iov->iov_base + $msg->msg_iter.iov_offset), arg2)); */
   printf("%s\n", str(uptr($msg->msg_iter.iov->iov_base + $msg->msg_iter.iov_offset), arg2));
 }
